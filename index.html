@@ -2,39 +2,52 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Tham Quan Hệ Sinh Thái Biển 360°</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <style>
-        /* Nút bấm để kích hoạt quyền truy cập cảm biến trên iOS */
-        #permission-btn {
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        /* Nút bấm yêu cầu quyền cảm biến bắt buộc cho thiết bị di động */
+        #vr-btn {
             position: fixed;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 9999;
-            padding: 12px 24px;
+            padding: 15px 30px;
             background-color: #0077b6;
             color: white;
             border: none;
-            border-radius: 25px;
+            border-radius: 30px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        #instruction {
+            position: fixed;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            z-index: 9999;
+            font-size: 16px;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <button id="permission-btn">Bắt đầu trải nghiệm (Bật Cảm Biến)</button>
+    <div id="instruction">Xoay điện thoại hoặc vuốt màn hình để nhìn xung quanh 360°</div>
+    <button id="vr-btn">BẬT CẢM BIẾN & XEM VIDEO</button>
 
-    <a-scene>
+    <a-scene loading-screen="enabled: false">
         <a-assets>
-            <video id="sea-video" 
+            <video id="underwater-video" 
                    src="https://bitmovin-a.akamaihd.net/content/playhouse-vr/progressive.mp4" 
-                   autoplay 
-                   loop 
+                   preload="auto"
+                   loop="true" 
                    crossorigin="anonymous" 
                    playsinline 
                    webkit-playsinline>
@@ -43,32 +56,33 @@
 
         <a-entity camera look-controls="magicWindowTrackingEnabled: true; touchEnabled: true"></a-entity>
 
-        <a-videosphere src="#sea-video" rotation="0 -90 0"></a-videosphere>
+        <a-videosphere src="#underwater-video" rotation="0 -90 0"></a-videosphere>
     </a-scene>
 
     <script>
-        const btn = document.getElementById('permission-btn');
-        const video = document.getElementById('sea-video');
+        const playButton = document.getElementById('vr-btn');
+        const videoElement = document.getElementById('underwater-video');
 
-        // Hàm kích hoạt phát video và xin quyền cảm biến
-        btn.addEventListener('click', function() {
-            // Phát video (sửa lỗi trình duyệt chặn tự động phát có tiếng)
-            video.play();
+        playButton.addEventListener('click', function() {
+            // Phát video (vượt qua tính năng chặn tự động phát của trình duyệt)
+            videoElement.play().catch(function(error) {
+                console.log("Chờ tương tác người dùng để phát video: ", error);
+            });
 
-            // Xin quyền truy cập cảm biến đối với thiết bị iOS (iPhone/iPad)
+            // Yêu cầu quyền cảm biến chuyển động đối với iPhone (iOS 13 trở lên)
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(permissionState => {
                         if (permissionState === 'granted') {
-                            btn.style.display = 'none'; // Ẩn nút nếu thành công
+                            playButton.style.display = 'none'; // Cấp quyền thành công, ẩn nút
                         } else {
-                            alert('Bạn cần cấp quyền cảm biến để xoay được góc nhìn!');
+                            alert('Bạn cần cho phép quyền cảm biến chuyển động để xoay được góc nhìn đại dương!');
                         }
                     })
                     .catch(console.error);
             } else {
-                // Đối với Android, cảm biến thường tự động bật, chỉ cần ẩn nút
-                btn.style.display = 'none';
+                // Với Android hoặc máy tính, cảm biến tự động chạy nên chỉ cần ẩn nút kích hoạt
+                playButton.style.display = 'none';
             }
         });
     </script>
