@@ -1,35 +1,160 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=no, minimum-scale=1.0, maximum-scale=1.0">
-    <title>WebAR Mô Hình Chim - AR.js</title>
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-  </head>
-  <body style="margin: 0px; overflow: hidden;">
-    
-    <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;">
-      
-      <a-assets>
-        <a-asset-item id="bird-obj" src="./assets/12274_Lizard_v1_l2.obj"></a-asset-item>
-        <a-asset-item id="bird-mtl" src="./assets/12274_Lizard_v1_l2.mtl"></a-asset-item>
-      </a-assets>
-      
-      <a-marker preset="hiro">
-        
-        <a-obj-model 
-          src="#bird-obj" 
-          mtl="#bird-mtl" 
-          position="0 0 0" 
-          scale="0.05 0.05 0.05" 
-          rotation="-90 0 0">
-        </a-obj-model>
+import 'package:flutter/material.dart';
+import 'package:video_360/video_360.dart';
 
-      </a-marker>
-      
-      <a-entity camera></a-entity>
-      
-    </a-scene>
-  </body>
-</html>
+void main() {
+  runApp(const QuaiVatVideo360App());
+}
+
+class QuaiVatVideo360App extends StatelessWidget {
+  const QuaiVatVideo360App({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'App Xem Video 360 Độ',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.dark, // Giao diện tối giúp xem video đẹp hơn
+        primaryColor: Colors.teal,
+      ),
+      home: const ManHinhXemVideo(),
+    );
+  }
+}
+
+class ManHinhXemVideo extends StatefulWidget {
+  const ManHinhXemVideo({Key? key}) : super(key: key);
+
+  @override
+  State<ManHinhXemVideo> createState() => _ManHinhXemVideoState();
+}
+
+class _ManHinhXemVideoState extends State<ManHinhXemVideo> {
+  late Video360Controller _controller;
+  
+  // URL Video mẫu dạng 360 độ góc rộng (định dạng mp4 trực tiếp từ server)
+  // Bạn có thể thay link video .mp4 360 độ của bạn vào đây
+  final String _videoUrl = 'https://bitmovin-a.akamaihd.net/content/playhouse-vr/mpuds/105560.mp4';
+
+  bool _isPlaying = false;
+  bool _isMuted = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Trình Phát Video 360° Cảm Ứng'),
+        centerTitle: true,
+        backgroundColor: Colors.black87,
+      ),
+      body: Stack(
+        children: [
+          // LỚP 1: Vùng hiển thị Video 360 độ (Chiếm toàn màn hình)
+          // Người dùng có thể chạm, vuốt (drag) lên/xuống/trái/phải để xoay góc nhìn
+          Positioned.fill(
+            child: Video360View(
+              url: _videoUrl,
+              onVideo360ViewCreated: (viewController) {
+                _controller = viewController;
+                _controller.play(); // Tự động phát khi tải xong
+                setState(() {
+                  _isPlaying = true;
+                });
+              },
+              onPlayInfo: (Video360PlayInfo info) {
+                // Có thể dùng để cập nhật thời gian tiến trình video ở đây nếu cần
+              },
+            ),
+          ),
+
+          // LỚP 2: Các nút bấm điều khiển đè lên trên video
+          Positioned(
+            bottom: 40,
+            left: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6), // Làm mờ nền thanh điều khiển
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Nút Tắt/Bật tiếng
+                  IconButton(
+                    icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up),
+                    color: Colors.white,
+                    onPressed: () {
+                      _controller.soundMute();
+                      setState(() {
+                        _isMuted = !_isMuted;
+                      });
+                    },
+                  ),
+
+                  // Nút Phát / Tạm dừng (Chính giữa)
+                  CircleAvatar(
+                    backgroundColor: Colors.teal,
+                    radius: 30,
+                    child: IconButton(
+                      iconSize: 35,
+                      icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                      color: Colors.white,
+                      onPressed: () {
+                        if (_isPlaying) {
+                          _controller.pause();
+                        } else {
+                          _controller.play();
+                        }
+                        setState(() {
+                          _isPlaying = !_isPlaying;
+                        });
+                      },
+                    ),
+                  ),
+
+                  // Nút Đưa camera về vị trí góc nhìn trung tâm ban đầu
+                  IconButton(
+                    icon: const Icon(Icons.center_focus_strong),
+                    color: Colors.white,
+                    tooltip: 'Góc nhìn mặc định',
+                    onPressed: () {
+                      _controller.reset();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Gợi ý cho người dùng biết là có thể vuốt
+          Positioned(
+            top: 20,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  '👆 Vuốt màn hình để xoay góc nhìn 360°',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    // Giải phóng bộ nhớ khi thoát app hoặc chuyển màn hình
+    super.dispose();
+  }
+}
