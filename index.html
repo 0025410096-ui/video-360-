@@ -1,160 +1,76 @@
-import 'package:flutter/material.dart';
-import 'package:video_360/video_360.dart';
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tham Quan Hệ Sinh Thái Biển 360°</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <style>
+        /* Nút bấm để kích hoạt quyền truy cập cảm biến trên iOS */
+        #permission-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            padding: 12px 24px;
+            background-color: #0077b6;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
 
-void main() {
-  runApp(const QuaiVatVideo360App());
-}
+    <button id="permission-btn">Bắt đầu trải nghiệm (Bật Cảm Biến)</button>
 
-class QuaiVatVideo360App extends StatelessWidget {
-  const QuaiVatVideo360App({Key? key}) : super(key: key);
+    <a-scene>
+        <a-assets>
+            <video id="sea-video" 
+                   src="https://bitmovin-a.akamaihd.net/content/playhouse-vr/progressive.mp4" 
+                   autoplay 
+                   loop 
+                   crossorigin="anonymous" 
+                   playsinline 
+                   webkit-playsinline>
+            </video>
+        </a-assets>
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'App Xem Video 360 Độ',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark, // Giao diện tối giúp xem video đẹp hơn
-        primaryColor: Colors.teal,
-      ),
-      home: const ManHinhXemVideo(),
-    );
-  }
-}
+        <a-entity camera look-controls="magicWindowTrackingEnabled: true; touchEnabled: true"></a-entity>
 
-class ManHinhXemVideo extends StatefulWidget {
-  const ManHinhXemVideo({Key? key}) : super(key: key);
+        <a-videosphere src="#sea-video" rotation="0 -90 0"></a-videosphere>
+    </a-scene>
 
-  @override
-  State<ManHinhXemVideo> createState() => _ManHinhXemVideoState();
-}
+    <script>
+        const btn = document.getElementById('permission-btn');
+        const video = document.getElementById('sea-video');
 
-class _ManHinhXemVideoState extends State<ManHinhXemVideo> {
-  late Video360Controller _controller;
-  
-  // URL Video mẫu dạng 360 độ góc rộng (định dạng mp4 trực tiếp từ server)
-  // Bạn có thể thay link video .mp4 360 độ của bạn vào đây
-  final String _videoUrl = 'https://bitmovin-a.akamaihd.net/content/playhouse-vr/mpuds/105560.mp4';
+        // Hàm kích hoạt phát video và xin quyền cảm biến
+        btn.addEventListener('click', function() {
+            // Phát video (sửa lỗi trình duyệt chặn tự động phát có tiếng)
+            video.play();
 
-  bool _isPlaying = false;
-  bool _isMuted = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Trình Phát Video 360° Cảm Ứng'),
-        centerTitle: true,
-        backgroundColor: Colors.black87,
-      ),
-      body: Stack(
-        children: [
-          // LỚP 1: Vùng hiển thị Video 360 độ (Chiếm toàn màn hình)
-          // Người dùng có thể chạm, vuốt (drag) lên/xuống/trái/phải để xoay góc nhìn
-          Positioned.fill(
-            child: Video360View(
-              url: _videoUrl,
-              onVideo360ViewCreated: (viewController) {
-                _controller = viewController;
-                _controller.play(); // Tự động phát khi tải xong
-                setState(() {
-                  _isPlaying = true;
-                });
-              },
-              onPlayInfo: (Video360PlayInfo info) {
-                // Có thể dùng để cập nhật thời gian tiến trình video ở đây nếu cần
-              },
-            ),
-          ),
-
-          // LỚP 2: Các nút bấm điều khiển đè lên trên video
-          Positioned(
-            bottom: 40,
-            left: 20,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6), // Làm mờ nền thanh điều khiển
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Nút Tắt/Bật tiếng
-                  IconButton(
-                    icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up),
-                    color: Colors.white,
-                    onPressed: () {
-                      _controller.soundMute();
-                      setState(() {
-                        _isMuted = !_isMuted;
-                      });
-                    },
-                  ),
-
-                  // Nút Phát / Tạm dừng (Chính giữa)
-                  CircleAvatar(
-                    backgroundColor: Colors.teal,
-                    radius: 30,
-                    child: IconButton(
-                      iconSize: 35,
-                      icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
-                      color: Colors.white,
-                      onPressed: () {
-                        if (_isPlaying) {
-                          _controller.pause();
+            // Xin quyền truy cập cảm biến đối với thiết bị iOS (iPhone/iPad)
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            btn.style.display = 'none'; // Ẩn nút nếu thành công
                         } else {
-                          _controller.play();
+                            alert('Bạn cần cấp quyền cảm biến để xoay được góc nhìn!');
                         }
-                        setState(() {
-                          _isPlaying = !_isPlaying;
-                        });
-                      },
-                    ),
-                  ),
-
-                  // Nút Đưa camera về vị trí góc nhìn trung tâm ban đầu
-                  IconButton(
-                    icon: const Icon(Icons.center_focus_strong),
-                    color: Colors.white,
-                    tooltip: 'Góc nhìn mặc định',
-                    onPressed: () {
-                      _controller.reset();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          // Gợi ý cho người dùng biết là có thể vuốt
-          Positioned(
-            top: 20,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  '👆 Vuốt màn hình để xoay góc nhìn 360°',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ),
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    // Giải phóng bộ nhớ khi thoát app hoặc chuyển màn hình
-    super.dispose();
-  }
-}
+                    })
+                    .catch(console.error);
+            } else {
+                // Đối với Android, cảm biến thường tự động bật, chỉ cần ẩn nút
+                btn.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
